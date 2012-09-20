@@ -17,12 +17,34 @@
         line-height: 20px;
         height: 100%;
       }
+      .stats{
+        position: absolute;
+        top: 1%;
+        left:0;
+        margin:0 auto;
+        width: 500px;
+      }
+      .stat{
+        font-weight: bold;
+      }
+      .countryList{
+        width: 500px;
+        position: absolute;
+        list-style: none;
+        left: 0;
+        margin: 0;
+      }
     </style>
  </head>
   <body>
-<div id="stats"></div>
+<div id="stats">
+  Total Twits: <span class='stat totTwit'>0</span><br />
+  With Cordinates: <span class='stat coordTwits'>0</span>
+  <span class="countryList"></span>
+</div>
   <div id="container"></div>
-
+  <script type="text/javascript" src="third-party/jquery.min.js"></script>
+  <script type="text/javascript" src="third-party/mustache.js"></script>
   <script type="text/javascript" src="third-party/Three45/ThreeWebGL.js"></script>
   <script type="text/javascript" src="third-party/Three45/ThreeExtras.js"></script>
   <script type="text/javascript" src="third-party/Three/RequestAnimationFrame.js"></script>
@@ -37,15 +59,33 @@
       var container = document.getElementById('container');
       var globe = new Globe(container);
       var socket = io.connect(window.location.href);
+      //  on cords
       socket.on('latlng', function (data) {
         var c = new THREE.Color();
         c.setHSV( 0.55 , 1.0, 1.0 );
-        console.log(data);
         globe.addPoint(data.lat,data.lng,data.size,c);
       });
       globe.animate();
+      socket.on('stats', function(stats){
+        $('.totTwit').html(stats.count);
+        $('.coordTwits').html(stats.withGeo);
+        //  formated data for rendering
+        var formatedData =[];
+        for (var i = stats.countryCount.length - 1; i >= 0; i--) {
+          var currentCountry = stats.countryCount[i];
+          formatedData.push({name:currentCountry.name, count:currentCountry.count});
+        };
+        var countryHTML = Mustache.to_html(page.templates.countries, {countryCount:formatedData});
+        $('.countryList').html(countryHTML);
+      });
     }
 
+    var page = {
+      templates:
+      {
+        countries: "<br />Total Twits By Country:<br /><ul class='countryList'>{{#countryCount}}<li><b>{{name}}</b> : {{count}}</li>{{/countryCount}}</ul>"
+      }
+    }
   </script>
 
   </body>

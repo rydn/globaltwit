@@ -6,11 +6,12 @@ var server = new Mongolian();
 var db = server.db("globalTwit"),
 twits = db.collection("twits"),
 dbHook = new Hook({
-  name: "db"
+  name: "db",
+  silent: true,
+  autoheal: true
 });
 //	save tp db
 dbHook.on('*::save', function(dataToSave){
 	twits.insert(dataToSave);
 });
-
 dbHook.start();
