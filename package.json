@@ -1,9 +1,15 @@
 {
-  "dependencies": {
-    "express": "2.5.x",
-    "socket.io": "0.9.x",
-    "mongolian": "0.1.x",
-    "hook.io": "0.8.x",
-    "json-line-protocol": "0.0.x"
-  }
+  "name": "globaltwit",
+  "version": "0.0.0",
+  "description": "twitter posts visualised on globeGL",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@bitbucket.org:ryandick/globaltwit.git"
+  },
+  "author": "Ryan Dick",
+  "license": "BSD"
 }
