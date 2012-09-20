@@ -35,18 +35,17 @@ app.listen(8000);
 var dbHook = new Hook({
   name: "db"
 });
-dbHook.start();
+
 dbHook.on('hook::ready', function(){
+  console.log('db hook ready');
+});
 
 //  socket events
 io.sockets.on('connection', function(socket) {
-  // setInterval(function() {
-  //   socket.emit('latlng', {
-  //     lat: Math.random() * 360 - 180,
-  //     lng: Math.random() * 360 - 180,
-  //     size: Math.random() * 150 + 50
-  //   });
-  // }, 200);
+  //  counters
+  var twitCount = 0;
+  var twitCountWithGeo = 0;
+  //  parser
   var jsonTwitter = new jsonline();
   var username = 'ryandick',
     password = 'D1z4yd1ck!';
@@ -69,16 +68,21 @@ io.sockets.on('connection', function(socket) {
   });
 
   jsonTwitter.on('value', function(value) {
+    //  increment counter
+      twitCount++;
     //  only record tweets with geo pos
     if (value.geo) {
+      twitCountWithGeo++;
       socket.emit('latlng', {
         lat: value.geo.coordinates[0],
         lng: value.geo.coordinates[1],
         size: Math.random() * 150 + 50
       });
+      //  emit stats
+      socket.emit('stats', {count:twitCount,withGeo:twitCountWithGeo, timestamp:new Date().toString()});
       //  emit data to be saved
       dbHook.emit('save', value);
     }
   });
 });
-});
+dbHook.start();
