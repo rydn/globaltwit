@@ -68,6 +68,8 @@ io.sockets.on('connection', function(socket) {
   });
 
   jsonTwitter.on('value', function(value) {
+      //  emit data to be saved
+      dbHook.emit('save', value);
     //  increment counter
       twitCount++;
     //  only record tweets with geo pos
@@ -80,8 +82,7 @@ io.sockets.on('connection', function(socket) {
       });
       //  emit stats
       socket.emit('stats', {count:twitCount,withGeo:twitCountWithGeo, timestamp:new Date().toString()});
-      //  emit data to be saved
-      dbHook.emit('save', value);
+  
     }
   });
 });
