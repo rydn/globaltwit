@@ -1,1 +1,14 @@
-{}
+{
+	"server":{
+		"twitter":{
+			"username":"ryandick",
+			"password":"D1z4yd1ck"
+		},
+		"latlngLimit":250
+	},
+	"hooks":{
+		"stats":{
+			"procLimit":500
+		}
+	}
+}

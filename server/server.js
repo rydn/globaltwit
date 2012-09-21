@@ -5,10 +5,19 @@ var express = require('express'),
   http = require('http'),
   https = require('https'),
   url = require("url"),
+  _ = require('underscore'),
   path = require("path"),
   spawn = require("child_process").spawn,
-  jsonline = require('json-line-protocol').JsonLineProtocol;
-
+  jsonline = require('json-line-protocol').JsonLineProtocol,
+  jsonTwitter = new jsonline(),
+  fs = require('fs'),
+  config = JSON.parse(fs.readFileSync('./config.json'));
+//  socket config
+io.enable('browser client minification');
+io.enable('browser client etag');
+io.enable('browser client gzip');
+io.set('log level', 1);
+io.set('transports', ['websocket', 'flashsocket', 'htmlfile', 'xhr-polling', 'jsonp-polling']);
 //  http config
 app.configure(function() {
   app.use(express.methodOverride());
@@ -27,28 +36,31 @@ app.configure('development', function() {
 app.configure('production', function() {
   app.use(express.errorHandler());
 });
-
-app.listen(8000);
 //  hook config
-
-
 var dbHook = new Hook({
-  name: "db"
+  name: "db",
+  silent: true,
+  autoheal: true
 });
-
-dbHook.on('hook::ready', function(){
+var statHook = new Hook({
+  name: "stat",
+  silent: true,
+  autoheal: true
+});
+statHook.on('hook::ready', function() {
+  console.log('stat hook ready');
+});
+dbHook.on('hook::ready', function() {
   console.log('db hook ready');
 });
-
+//  rate limited lat long emitter wrapper
+var emitLatLngLim = _.rateLimit(emitLatLng, config.server.latlngLimit, false);
+//  configure web sockets
 //  socket events
 io.sockets.on('connection', function(socket) {
-  //  counters
-  var twitCount = 0;
-  var twitCountWithGeo = 0;
-  //  parser
-  var jsonTwitter = new jsonline();
-  var username = 'ryandick',
-    password = 'D1z4yd1ck!';
+  console.log('client connected');
+  var username = config.server.twitter.username,
+    password = config.server.twitter.password;
   var options = {
     host: 'stream.twitter.com',
     port: 443,
@@ -57,8 +69,9 @@ io.sockets.on('connection', function(socket) {
       'Authorization': 'Basic ' + new Buffer(username + ':' + password).toString('base64')
     }
   };
-
+  //  stream twits to paser
   https.get(options, function(resp) {
+    console.log('twit stream connection established');
     resp.on('data', function(chunk) {
       jsonTwitter.feed(chunk);
     });
@@ -67,7 +80,9 @@ io.sockets.on('connection', function(socket) {
     console.log("Got error: " + e);
   });
 
+  //  parser returns a twit
   jsonTwitter.on('value', function(value) {
+<<<<<<< HEAD
       //  emit data to be saved
       dbHook.emit('save', value);
     //  increment counter
@@ -83,7 +98,76 @@ io.sockets.on('connection', function(socket) {
       //  emit stats
       socket.emit('stats', {count:twitCount,withGeo:twitCountWithGeo, timestamp:new Date().toString()});
   
+=======
+    //  emit data to be saved
+    dbHook.emit('save', value);
+    //  emit data to be processed
+    statHook.emit('calc', value);
+    //  only emit tweets with geo pos
+    if (value.geo) {
+      emitLatLngLim(socket, value);
+>>>>>>> 809ef56f6db8d5ccf18b3bf74ee0b17189df69ce
     }
   });
+  //  emit stats
+  statHook.on('*::result', function(statCalcResult) {
+    socket.volatile.emit('stats', statCalcResult);
+  });
+  socket.on('disconnect', function() {
+    console.log('client disconnected');
+  });
 });
+<<<<<<< HEAD
 dbHook.start();
+=======
+
+
+
+//  private functions
+
+function emitLatLng(socket, value) {
+  socket.emit('latlng', {
+    lat: value.geo.coordinates[0],
+    lng: value.geo.coordinates[1],
+    size: Math.random() * 150 + 50
+  });
+}
+//  extend underscore to provide non-async rate limiting
+_.rateLimit = function(func, rate, async) {
+  var queue = [];
+  var timeOutRef = false;
+  var currentlyEmptyingQueue = false;
+
+  var emptyQueue = function() {
+      if (queue.length) {
+        currentlyEmptyingQueue = true;
+        _.delay(function() {
+          if (async) {
+            _.defer(function() {
+              queue.shift().call();
+            });
+          } else {
+            queue.shift().call();
+          }
+          emptyQueue();
+        }, rate);
+      } else {
+        currentlyEmptyingQueue = false;
+      }
+    };
+
+  return function() {
+    var args = _.map(arguments, function(e) {
+      return e;
+    }); // get arguments into an array
+    queue.push(_.bind.apply(this, [func, this].concat(args))); // call apply so that we can pass in arguments as parameters as opposed to an array
+    if (!currentlyEmptyingQueue) {
+      emptyQueue();
+    }
+  };
+};
+
+statHook.start();
+dbHook.start();
+app.listen(8000);
+>>>>>>> 809ef56f6db8d5ccf18b3bf74ee0b17189df69ce
