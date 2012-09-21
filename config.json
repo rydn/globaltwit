@@ -2,13 +2,32 @@
 	"server":{
 		"twitter":{
 			"username":"ryandick",
-			"password":"D1z4yd1ck"
+			"password":"D1z4yd1ck!"
 		},
-		"latlngLimit":250
+		"latlngLimit":250,
+		"port":8000,
+		"websockets":{
+			"loglevel":1
+		}
 	},
 	"hooks":{
 		"stats":{
-			"procLimit":500
+			"debug":false,
+			"procLimit":500,
+			"port":8010,
+			"sink":{
+				"port":8020
+			}
+		},
+		"db":{
+			"debug":false,
+			"port":8011
+		},
+		"wordlist":{
+			"port":8012,
+			"sink":{
+				"port":8020
+			}
 		}
 	}
 }

@@ -1,0 +1,5 @@
+#!/bin/bash
+forever start server/server.js
+forever start hooks/db.js
+forever start hooks/stats.js
+forever start hooks/wordlist.js
