@@ -38,6 +38,7 @@
  </head>
   <body>
 <div id="stats">
+  Connection Status: </span class='stat conStat'>not connected</span><br />
   Total Twits: <span class='stat totTwit'>0</span><br />
   With Cordinates: <span class='stat coordTwits'>0</span>
   <span class="countryList"></span>
@@ -61,6 +62,7 @@
       var socket = io.connect(window.location.href);
       //  on cords
       socket.on('latlng', function (data) {
+        $('.conStat').html('connected');
         var c = new THREE.Color();
         c.setHSV( 0.55 , 1.0, 1.0 );
         globe.addPoint(data.lat,data.lng,data.size,c);

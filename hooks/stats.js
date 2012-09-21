@@ -1,6 +1,9 @@
 //  dep
-var Hook = require('hook.io').Hook;
+var axon = require('axon');
 var _ = require('underscore');
+var fs = require('fs');
+var config = JSON.parse(fs.readFileSync('./config.json'));
+var inspect = require('util').inspect;
 //  vars
 var countryCount = [];
 var twitCountWithGeo = 0;
@@ -8,14 +11,17 @@ var twitCount = 0;
 var totalTime = 0;
 var avgTime = 0;
 var startTime;
-//  hook
-var statHook = new Hook({
-  name: 'stat',
-  silent: true,
-  autoheal: true
-});
+//  hook and sink
+var statHook = axon.socket('emitter');
+var statSink = axon.socket('push');
+statSink.connect(config.hooks.stats.sink.port);
+statHook.connect(config.hooks.stats.port);
+console.log('stats sink connected to port: ' + config.hooks.stats.sink.port);
+console.log('stats subscriber connected to port: ' + config.hooks.stats.port);
 //  private functions
 //  main proccessing function
+
+
 function process(value) {
   twitCount++;
   if (value.geo) {
@@ -47,20 +53,23 @@ function process(value) {
   var calcTime = (completionTime - startTime);
   totalTime = totalTime + calcTime;
   avgTime = totalTime / twitCount;
-  statHook.emit('result', {
-    count: twitCount,
-    withGeo: twitCountWithGeo,
-    time: {
-      calc: calcTime,
-      start: startTime,
-      complete: completionTime,
-      calcTime: {
-        total: totalTime,
-        avg: avgTime
-      }
-    },
-    countryCount: countryCount
-  });
+  statSink.send(JSON.stringify({
+    action: "stat",
+    result: {
+      count: twitCount,
+      withGeo: twitCountWithGeo,
+      time: {
+        calc: calcTime,
+        start: startTime,
+        complete: completionTime,
+        calcTime: {
+          total: totalTime,
+          avg: avgTime
+        }
+      },
+      countryCount: countryCount
+    }
+  }));
 }
 //  extend underscore to provide non-async rate limiting
 _.rateLimit = function(func, rate, async) {
@@ -99,19 +108,18 @@ _.rateLimit = function(func, rate, async) {
 
 //  main logic
 //  create throttled version of proccess
-var proc = _.rateLimit(process, 500, false);
-statHook.on('hook::ready', function() {
-  console.log('stats hook ready, running in sync mode with a limit of 1 request per 1000ms');
-});
-statHook.on('*::calc', function(value) {
+var proc = _.rateLimit(process, config.hooks.stats.rateLimit, false);
+statHook.on('calc', function(value) {
+  if (config.hooks.stats.debug) {
+    console.log('subscriber receiving: ' + inspect(value));
+  }
   //  mark time
   startTime = new Date();
   proc(value);
 });
 //  interval for reporting stats
-setInterval(function(){
-  console.log('\ntotal processed: '+twitCount);
-  console.log('total time spent proccessing: ' + totalTime +'ms');
-  console.log('average time per proc: '+Math.round(avgTime)+'ms');
+setInterval(function() {
+  console.log('\ntotal processed: ' + twitCount);
+  console.log('total time spent proccessing: ' + totalTime + 'ms');
+  console.log('average time per proc: ' + Math.round(avgTime) + 'ms');
 }, 10000);
-statHook.start();
