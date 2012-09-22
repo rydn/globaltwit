@@ -1,34 +1,12 @@
-#!/usr/bin/env node
-
-/**
- * Module dependencies.
- */
-
-var program = require('commander');
-program.version('0.0.1').usage('[options]').option('-s, --server', 'http server').option('-w, --workers', 'all worker hooks').parse(process.argv);
-
-//	server actions
-if (program.server) {
-	switch (program.server) {
-	case 'start':
-		console.log('start server');
-		break;
-	case 'stop':
-		console.log('stop server');
-		break;
-	}
-}
-
-//	worker actions
-if(program.workers){
-	console.log(program.workers);
-	switch (program.workers) {
-
-	case 'start':
-		console.log('start workers');
-		break;
-	case 'stop':
-		console.log('stop workers');
-		break;
-	}
-}
+#!/bin/bash
+echo "Global Twit Starting..."
+echo
+echo "Starting http server.."
+forever start server/server.js
+echo
+echo "Starting worker hooks"
+forever start hooks/db.js
+forever start hooks/stats.js
+forever start hooks/wordlist.js
+echo
+echo "Done!"
