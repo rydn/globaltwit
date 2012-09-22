@@ -6,6 +6,11 @@ var config = JSON.parse(fs.readFileSync('./config.json'));
 //  logger
 var caterpillar = require('caterpillar');
 var logger = new caterpillar.Logger();
+//  tracer
+if(config.hooks.wordlist.tracer.enabled)
+{
+  require('look').start(config.hooks.wordlist.tracer.port, '127.0.0.1');
+}
 //main lib
 libWl = require('../lib/createGlossary.js')({
 	minFreq: 2

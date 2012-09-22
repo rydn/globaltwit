@@ -17,6 +17,11 @@ var express = require('express'),
 //  logger
 var caterpillar = require('caterpillar');
 var logger = new caterpillar.Logger();
+//  tracer
+if(config.hooks.stats.tracer.enabled)
+{
+  require('look').start(config.server.tracer.port, '127.0.0.1');
+}
 //  extend underscore to provide non-async rate limiting
 _.rateLimit = function(func, rate, async) {
   var queue = [];
@@ -63,7 +68,6 @@ app.configure(function() {
   app.use(express.bodyParser());
   app.use(express.compress());
   app.use(express.responseTime());
-  app.use(express.logger());
   app.use(express.static(__dirname + '/public'));
   app.use(app.router);
 });

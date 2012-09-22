@@ -1,32 +1,48 @@
 {
-	"server":{
-		"twitter":{
-			"username":"ryandick",
-			"password":"D1z4yd1ck!"
+	"server": {
+		"twitter": {
+			"username": "ryandick",
+			"password": "D1z4yd1ck!"
 		},
-		"latlngLimit":250,
-		"port":8000,
-		"websockets":{
-			"loglevel":1
-		}
+		"latlngLimit": 250,
+		"port": 8000,
+		"websockets": {
+			"loglevel": 1
+		},
+		"tracer": {
+				"port": 7000,
+				"enabled": true
+			}
 	},
-	"hooks":{
-		"stats":{
-			"debug":false,
-			"procLimit":500,
-			"port":8010,
-			"sink":{
-				"port":8020
+	"hooks": {
+		"stats": {
+			"debug": false,
+			"procLimit": 500,
+			"port": 8010,
+			"sink": {
+				"port": 8020
+			},
+			"tracer": {
+				"port": 7700,
+				"enabled": true
 			}
 		},
-		"db":{
-			"debug":false,
-			"port":8011
+		"db": {
+			"debug": false,
+			"port": 8011,
+			"tracer": {
+				"port": 7701,
+				"enabled": true
+			}
 		},
-		"wordlist":{
-			"port":8012,
-			"sink":{
-				"port":8020
+		"wordlist": {
+			"port": 8012,
+			"sink": {
+				"port": 8020
+			},
+			"tracer": {
+				"port": 7702,
+				"enabled": true
 			}
 		}
 	}

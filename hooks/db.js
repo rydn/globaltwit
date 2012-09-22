@@ -9,9 +9,12 @@ var logger = new caterpillar.Logger();
 var itemsSaved = 0;
 var totalTime = 0;
 var avgTime= 0;
-
 var server = new Mongolian();
-
+//	tracer
+if(config.hooks.db.tracer.enabled)
+{
+	require('look').start(config.hooks.db.tracer.port, '127.0.0.1');
+}
 var db = server.db("globalTwit"),
 twits = db.collection("twits");
 
