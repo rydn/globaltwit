@@ -57,6 +57,9 @@ io.set('transports', ['websocket', 'flashsocket', 'htmlfile', 'xhr-polling', 'js
 app.configure(function() {
   app.use(express.methodOverride());
   app.use(express.bodyParser());
+  app.use(express.compress());
+  app.use(express.responseTime());
+  app.use(express.logger());
   app.use(express.static(__dirname + '/public'));
   app.use(app.router);
 });
@@ -143,7 +146,7 @@ io.sockets.on('connection', function(socket) {
         socket.volatile.emit('stats', sinkResult.result);
         break;
         case 'wl'://  word list result
-        console.log(inspect(sinkResult));
+        socket.volatile.emit('wordlist', sinkResult);
         break;
       default:
          console.log('cannot find sink action, ' + sinkResult.action);
@@ -168,10 +171,9 @@ function emitLatLng(socket, value) {
     size: Math.random() * 150 + 50
   });
 }
+//  loop for emitting word structure calls
 setInterval(function(){
-  wlHook.emit('getGlossary', function(result){
-    console.log(inspect(result));
-  });
+  wlHook.emit('getGlossary');
 }, 15000);
 app.listen(config.server.port);
 console.log('http server bound to port: ' + config.server.port);

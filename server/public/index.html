@@ -16,6 +16,7 @@
         font-size: 13px;
         line-height: 20px;
         height: 100%;
+        overflow: hidden;
       }
       .stats{
         position: absolute;
@@ -38,7 +39,7 @@
  </head>
   <body>
 <div id="stats">
-  Connection Status: </span class='stat conStat'>not connected</span><br />
+  Connection Status: <span class='stat conStat'>connecting..</span><br />
   Total Twits: <span class='stat totTwit'>0</span><br />
   With Cordinates: <span class='stat coordTwits'>0</span>
   <span class="countryList"></span>
@@ -80,6 +81,9 @@
         var countryHTML = Mustache.to_html(page.templates.countries, {countryCount:formatedData});
         $('.countryList').html(countryHTML);
       });
+      socket.on('wordlist', function(wordlistResult){
+        console.log(wordlistResult);
+      })
     }
 
     var page = {
