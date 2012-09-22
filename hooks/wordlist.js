@@ -3,6 +3,9 @@ var Mongolian = require("mongolian");
 var _ = require('underscore');
 var fs = require('fs');
 var config = JSON.parse(fs.readFileSync('./config.json'));
+//  logger
+var caterpillar = require('caterpillar');
+var logger = new caterpillar.Logger();
 //main lib
 libWl = require('../lib/createGlossary.js')({
 	minFreq: 2
@@ -20,11 +23,12 @@ var keywords = db.collection('keywords');
 //	wordlist rpc socket
 var wlHook = axon.socket('emitter');
 wlHook.connect(config.hooks.wordlist.port);
+logger.log('wordlist subscriber connected to port: ' + config.hooks.wordlist.port);
 
 //	sink socket
 var sink = axon.socket('push');
 sink.connect(config.hooks.wordlist.sink.port);
-
+logger.log('sink connected on port: ' +config.hooks.wordlist.sink.port);
 
 //	private functions
 //	main task
@@ -66,7 +70,7 @@ function _getGlossary() {
 			returnObj.time.avg = totalTime / itemsProccessed;
 			sink.send(JSON.stringify(returnObj));
 		} else {
-			console.log('ERROR - ' + err);
+			logger.log('ERROR - ' + err);
 		}
 	});
 }
@@ -88,9 +92,9 @@ wlHook.on('getGlossary', function(wlReq) {
 setInterval(function() {
 
 	twits.count(function(err, totalInDb) {
-		console.log('\ntotal tweets in database: ' + totalInDb);
-		console.log('total processed: ' + itemsProccessed);
-		console.log('total time spent proccessing: ' + totalTime + 'ms');
-		console.log('average time per proc: ' + Math.round(totalTime / itemsProccessed) + 'ms');
+		logger.log('\ntotal tweets in database: ' + totalInDb);
+		logger.log('total processed: ' + itemsProccessed);
+		logger.log('total time spent proccessing: ' + totalTime + 'ms');
+		logger.log('average time per proc: ' + Math.round(totalTime / itemsProccessed) + 'ms');
 	});
 }, 10000);

@@ -11,13 +11,16 @@ var twitCount = 0;
 var totalTime = 0;
 var avgTime = 0;
 var startTime;
+//  logger
+var caterpillar = require('caterpillar');
+var logger = new caterpillar.Logger();
 //  hook and sink
 var statHook = axon.socket('emitter');
 var statSink = axon.socket('push');
 statSink.connect(config.hooks.stats.sink.port);
 statHook.connect(config.hooks.stats.port);
-console.log('stats sink connected to port: ' + config.hooks.stats.sink.port);
-console.log('stats subscriber connected to port: ' + config.hooks.stats.port);
+logger.log('stats sink connected to port: ' + config.hooks.stats.sink.port);
+logger.log('stats subscriber connected to port: ' + config.hooks.stats.port);
 //  private functions
 //  main proccessing function
 
@@ -111,7 +114,7 @@ _.rateLimit = function(func, rate, async) {
 var proc = _.rateLimit(process, config.hooks.stats.rateLimit, false);
 statHook.on('calc', function(value) {
   if (config.hooks.stats.debug) {
-    console.log('subscriber receiving: ' + inspect(value));
+    logger.log('subscriber receiving: ' + inspect(value));
   }
   //  mark time
   startTime = new Date();
@@ -119,7 +122,7 @@ statHook.on('calc', function(value) {
 });
 //  interval for reporting stats
 setInterval(function() {
-  console.log('\ntotal processed: ' + twitCount);
-  console.log('total time spent proccessing: ' + totalTime + 'ms');
-  console.log('average time per proc: ' + Math.round(avgTime) + 'ms');
+  logger.log('\ntotal processed: ' + twitCount);
+  logger.log('total time spent proccessing: ' + totalTime + 'ms');
+  logger.log('average time per proc: ' + Math.round(avgTime) + 'ms');
 }, 10000);

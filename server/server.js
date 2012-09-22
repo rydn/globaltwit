@@ -13,6 +13,10 @@ var express = require('express'),
   jsonTwitter = new jsonline(),
   fs = require('fs'),
   config = JSON.parse(fs.readFileSync('./config.json'));
+
+//  logger
+var caterpillar = require('caterpillar');
+var logger = new caterpillar.Logger();
 //  extend underscore to provide non-async rate limiting
 _.rateLimit = function(func, rate, async) {
   var queue = [];
@@ -87,15 +91,15 @@ dbHook.bind(config.hooks.db.port);
 statHook.bind(config.hooks.stats.port);
 wlHook.bind(config.hooks.wordlist.port);
 
-console.log('stats sink bound to port: ' + config.hooks.stats.sink.port);
-console.log('db hook bound to port: ' + config.hooks.db.port);
-console.log('stats hook bound to port: ' + config.hooks.stats.port);
+logger.log('stats sink bound to port: ' + config.hooks.stats.sink.port);
+logger.log('db hook bound to port: ' + config.hooks.db.port);
+logger.log('stats hook bound to port: ' + config.hooks.stats.port);
 //  rate limited lat long emitter wrapper
 var emitLatLngLim = _.rateLimit(emitLatLng, config.server.latlngLimit, false);
 //  configure web sockets
 //  socket events
 io.sockets.on('connection', function(socket) {
-  console.log('client connected');
+  logger.log('client connected');
   var username = config.server.twitter.username,
     password = config.server.twitter.password;
   var options = {
@@ -107,14 +111,14 @@ io.sockets.on('connection', function(socket) {
     }
   };
   //  stream twits to paser
-  https.get(options, function(resp) {
-    console.log('twit stream connection established');
+  var twitStream = https.get(options, function(resp) {
+    logger.log('twit stream connection established');
     resp.on('data', function(chunk) {
       jsonTwitter.feed(chunk);
     });
   }).on("error", function(e) {
-    console.log("Got error: " + e.message);
-    console.log("Got error: " + e);
+    logger.log("Got error: " + e.message);
+    logger.log("Got error: " + e);
   });
 
   //  parser returns a twit
@@ -123,7 +127,7 @@ io.sockets.on('connection', function(socket) {
     dbHook.emit('save', value);
     //  emit data to be processed
     if (config.hooks.stats.debug) {
-      console.log('publishing to stat hook: ' + inspect(value));
+      logger.log('publishing to stat hook: ' + inspect(value));
     }
     statHook.emit('calc', value);
     //  only emit tweets with geo pos
@@ -149,17 +153,19 @@ io.sockets.on('connection', function(socket) {
         socket.volatile.emit('wordlist', sinkResult);
         break;
       default:
-         console.log('cannot find sink action, ' + sinkResult.action);
+         logger.log('cannot find sink action, ' + sinkResult.action);
       }
 
     }else{
-      console.log(inspect(sinkResult));
+      logger.log(inspect(sinkResult));
     }
 
   });
   //  client disconnects
   socket.on('disconnect', function() {
-    console.log('client disconnected');
+    logger.log('client disconnected');
+    twitStream.end();
+    logger.log('twitter stream closed');
   });
 });
 //  private functions
@@ -176,4 +182,4 @@ setInterval(function(){
   wlHook.emit('getGlossary');
 }, 15000);
 app.listen(config.server.port);
-console.log('http server bound to port: ' + config.server.port);
+logger.log('http server bound to port: ' + config.server.port);

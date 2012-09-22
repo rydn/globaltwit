@@ -2,6 +2,9 @@ var axon = require('axon');
 var Mongolian = require("mongolian");
 var fs = require('fs');
 var config = JSON.parse(fs.readFileSync('./config.json'));
+//  logger
+var caterpillar = require('caterpillar');
+var logger = new caterpillar.Logger();
 //	counters
 var itemsSaved = 0;
 var totalTime = 0;
@@ -14,6 +17,7 @@ twits = db.collection("twits");
 
 var dbHook = axon.socket('emitter');
 dbHook.connect(config.hooks.db.port);
+logger.log('db subscriber connected on port: '+config.hooks.db.port);
 //	save tp db
 dbHook.on('save', function(dataToSave){
 	var start = new Date();
@@ -25,8 +29,8 @@ dbHook.on('save', function(dataToSave){
 });
 //  interval for reporting stats
 setInterval(function(){
-  console.log('\ntotal saved to db: '+itemsSaved);
-  console.log('total time spent proccessing: ' + totalTime +'ms');
-  console.log('average time per save: '+Math.round(avgTime)+'ms');
+  logger.log('\ntotal saved to db: '+itemsSaved);
+  logger.log('total time spent proccessing: ' + totalTime +'ms');
+  logger.log('average time per save: '+Math.round(avgTime)+'ms');
 }, 10000);
 
