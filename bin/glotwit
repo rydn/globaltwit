@@ -1,15 +1,14 @@
 #!/bin/bash
-LOG_DIR = ./var/logs/
-PID_DIR - ./var/pids/
 echo "Global Twit Starting..."
 echo
 echo "Starting http server.."
-forever start -l ${LOG_DIR}hooks_server.forever -o ${LOG_DIR}hooks_server.out -e ${LOG_DIR}hooks_server.err --pidFile ${PID_DIR}server.pid server/server.js
+forever start server/server.js
 echo
 echo "Starting worker hooks"
-forever start -l ${LOG_DIR}hooks_db.forever -o ${LOG_DIR}hooks_db.out -e ${LOG_DIR}hooks_db.err --pidFile ${PID_DIR}hook_db.pid hooks/db.js
-forever start -l ${LOG_DIR}hooks_stats.forever -o ${LOG_DIR}hooks_stats.out -e ${LOG_DIR}hooks_stats.err --pidFile ${PID_DIR}hook_stats.pid hooks/stats.js
-forever start -l ${LOG_DIR}hooks_wordlist.forever -o ${LOG_DIR}hooks_wordlist.out -e ${LOG_DIR}hooks_wordlist.err --pidFile ${PID_DIR}hook_wordlist.pid hooks/wordlist.js
+forever start hooks/db.js
+forever start hooks/stats.js
+forever start hooks/wordlist.js
 echo
 echo "Done!"
-
+echo 
+forever list
