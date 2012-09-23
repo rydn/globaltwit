@@ -1,14 +1,10 @@
 var express = require('express'),
   app = express.createServer(),
   io = require('socket.io').listen(app),
-  http = require('http'),
   https = require('https'),
   inspect = require('util').inspect,
-  url = require("url"),
   axon = require('axon'),
   _ = require('underscore'),
-  path = require("path"),
-  spawn = require("child_process").spawn,
   jsonline = require('json-line-protocol').JsonLineProtocol,
   jsonTwitter = new jsonline(),
   fs = require('fs'),
@@ -18,45 +14,16 @@ var express = require('express'),
 var caterpillar = require('caterpillar');
 var logger = new caterpillar.Logger();
 //  tracer
-if(config.hooks.stats.tracer.enabled)
-{
+if (config.hooks.stats.tracer.enabled) {
   require('look').start(config.server.tracer.port, config.server.tracer.host);
 }
-//  extend underscore to provide non-async rate limiting
-_.rateLimit = function(func, rate, async) {
-  var queue = [];
-  var timeOutRef = false;
-  var currentlyEmptyingQueue = false;
-
-  var emptyQueue = function() {
-      if (queue.length) {
-        currentlyEmptyingQueue = true;
-        _.delay(function() {
-          if (async) {
-            _.defer(function() {
-              queue.shift().call();
-            });
-          } else {
-            queue.shift().call();
-          }
-          emptyQueue();
-        }, rate);
-      } else {
-        currentlyEmptyingQueue = false;
-      }
-    };
-
-  return function() {
-    var args = _.map(arguments, function(e) {
-      return e;
-    }); // get arguments into an array
-    queue.push(_.bind.apply(this, [func, this].concat(args))); // call apply so that we can pass in arguments as parameters as opposed to an array
-    if (!currentlyEmptyingQueue) {
-      emptyQueue();
-    }
-  };
-};
-//  socket config
+//  for tracking connection status
+var twitCon = false;
+//  total tweets for rate calculations
+var totTwit = 0;
+//  traces the amount of minutes since ini for calculating rates
+var globalStartTime = process.hrtime();
+//  configure web sockets
 io.enable('browser client minification');
 io.enable('browser client etag');
 io.enable('browser client gzip');
@@ -65,45 +32,37 @@ io.set('transports', ['websocket', 'flashsocket', 'htmlfile', 'xhr-polling', 'js
 //  http config
 app.configure(function() {
   app.use(express.methodOverride());
-  app.use(express.bodyParser());
   app.use(express.compress());
-  app.use(express.responseTime());
-  app.use(express.static(__dirname + '/public'));
+  app.use(express.static(__dirname + '/public/out'));
   app.use(app.router);
-});
-
-app.configure('development', function() {
-  app.use(express.errorHandler({
-    dumpExceptions: true,
-    showStack: true
-  }));
-});
-
-app.configure('production', function() {
   app.use(express.errorHandler());
 });
-//  hooks and sink config
-var dbHook = axon.socket('emitter');
-var statHook = axon.socket('emitter');
-var wlHook = axon.socket('emitter');
+
 //  sink
 var sink = axon.socket('pull');
 //  bind sink
 sink.bind(config.hooks.stats.sink.port);
+
+//  hooks and sink config
+var dbHook = axon.socket('emitter'),
+  statHook = axon.socket('emitter'),
+  wlHook = axon.socket('emitter');
+
 //  bind hooks
 dbHook.bind(config.hooks.db.port);
 statHook.bind(config.hooks.stats.port);
 wlHook.bind(config.hooks.wordlist.port);
 
+//  confirm start up
 logger.log('stats sink bound to port: ' + config.hooks.stats.sink.port);
 logger.log('db hook bound to port: ' + config.hooks.db.port);
 logger.log('stats hook bound to port: ' + config.hooks.stats.port);
-//  rate limited lat long emitter wrapper
-var emitLatLngLim = _.rateLimit(emitLatLng, config.server.latlngLimit, false);
-//  configure web sockets
+
+
 //  socket events
 io.sockets.on('connection', function(socket) {
   logger.log('client connected');
+  //  config for connecting to twitter pipe
   var username = config.server.twitter.username,
     password = config.server.twitter.password;
   var options = {
@@ -114,56 +73,69 @@ io.sockets.on('connection', function(socket) {
       'Authorization': 'Basic ' + new Buffer(username + ':' + password).toString('base64')
     }
   };
-  //  stream twits to paser
-  var twitStream = https.get(options, function(resp) {
-    logger.log('twit stream connection established');
-    resp.on('data', function(chunk) {
-      jsonTwitter.feed(chunk);
+  //  if not already connected
+  if (!twitCon) {
+    //  stream twits to paser
+    var twitStream = https.get(options, function(resp) {
+      //  log connection
+      logger.log('twit stream connection established');
+      //  on data emit
+      resp.on('data', function(chunk) {
+        //  feed to jsonTwitter parser
+        jsonTwitter.feed(chunk);
+      });
+    }).on("error", function(e) {
+      logger.log("Got error: " + e.message);
+      logger.log("Got error: " + e);
     });
-  }).on("error", function(e) {
-    logger.log("Got error: " + e.message);
-    logger.log("Got error: " + e);
-  });
-
+  } else {
+    logger.log('already connected to twit pipe, not doing it again');
+  }
   //  parser returns a twit
   jsonTwitter.on('value', function(value) {
-    //  emit data to be saved
-    dbHook.emit('save', value);
+    //  inc twit counter
+    totTwit++;
+    //  emit data to be saved by hooks
+    dbHook.emit('save', value); // save twit to db
+    statHook.emit('calc', value); // add twit to calculation pool
     //  emit data to be processed
     if (config.hooks.stats.debug) {
       logger.log('publishing to stat hook: ' + inspect(value));
     }
-    statHook.emit('calc', value);
+
     //  only emit tweets with geo pos
     if (value.geo) {
-      socket.emit('latlng', {
+      //calculate time since start
+      var calcTime = process.hrtime();
+      calcTime = (calcTime[0] - globalStartTime[0]);
+      emitClient(socket, 'latlng', {
         lat: value.geo.coordinates[0],
         lng: value.geo.coordinates[1],
-        size: Math.random() * 150 + 50
+        size: Math.random() * 150 + 50,
+        rate: Math.round(totTwit / calcTime),
+        calcTime: calcTime,
+        count: totTwit
       });
     }
 
   });
-  //  emit stats
+  //  on result from hooks
   sink.on('message', function(sinkResult) {
+    //  parse
     sinkResult = JSON.parse(sinkResult.toString());
-    if (sinkResult.action) {
-      //  switch on action find socket emit name space
-      switch(sinkResult.action){
-      case 'stat'://  stats result
-        socket.volatile.emit('stats', sinkResult.result);
-        break;
-        case 'wl'://  word list result
-        socket.volatile.emit('wordlist', sinkResult);
-        break;
-      default:
-         logger.log('cannot find sink action, ' + sinkResult.action);
-      }
-
-    }else{
-      logger.log(inspect(sinkResult));
+    //  switch on action find socket emit name space
+    switch (sinkResult.action) {
+    case 'stat':
+      //  stats result
+      emitClient(socket, 'stats', sinkResult.result);
+      break;
+    case 'wl':
+      //  word list result
+      emitClient(socket, 'wordlist', sinkResult);
+      break;
+    default:
+      logger.log('cannot find sink action, ' + sinkResult.action);
     }
-
   });
   //  client disconnects
   socket.on('disconnect', function() {
@@ -173,17 +145,20 @@ io.sockets.on('connection', function(socket) {
   });
 });
 //  private functions
+//  rate controller for client events
+var cEmitter = _.throttle(function(socket, action, data) {
+  socket.volatile.emit(action, data);
+}, 250);
+//  interface for client side throttle
 
-function emitLatLng(socket, value) {
-  socket.emit('latlng', {
-    lat: value.geo.coordinates[0],
-    lng: value.geo.coordinates[1],
-    size: Math.random() * 150 + 50
-  });
+function emitClient(socket, action, data) {
+  if ((action) && (data)) {
+    cEmitter(socket, action, data);
+  }
 }
 //  loop for emitting word structure calls
-setInterval(function(){
+setInterval(function() {
   wlHook.emit('getGlossary');
-}, 15000);
+}, 150000);
 app.listen(config.server.port);
 logger.log('http server bound to port: ' + config.server.port);

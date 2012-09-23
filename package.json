@@ -22,6 +22,7 @@
     "pos": "~0.1.1",
     "natural": "~0.1.16",
     "look": "*",
-    "caterpillar": "1.1.x"
+    "caterpillar": "1.1.x",
+    "microtime": "~0.3.1"
   }
 }

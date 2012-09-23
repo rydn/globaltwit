@@ -1,40 +1,49 @@
-//  dep
-var axon = require('axon');
-var _ = require('underscore');
-var fs = require('fs');
-var config = JSON.parse(fs.readFileSync('./config.json'));
-var inspect = require('util').inspect;
+//  deps
+var axon = require('axon'),
+  _ = require('underscore'),
+  fs = require('fs'),
+  config = JSON.parse(fs.readFileSync('./config.json')),
+  microtime = require('microtime');
+inspect = require('util').inspect;
 //  vars
-var countryCount = [];
-var twitCountWithGeo = 0;
-var twitCount = 0;
-var totalTime = 0;
-var avgTime = 0;
-var startTime;
+var countryCount = [],
+  twitCountWithGeo = 0,
+  twitCount = 0,
+  totalTime = 0,
+  avgTime = 0,
+  startTime;
 //  logger
-var caterpillar = require('caterpillar');
-var logger = new caterpillar.Logger();
+var caterpillar = require('caterpillar'),
+  logger = new caterpillar.Logger();
+//
 //  tracer
-if(config.hooks.stats.tracer.enabled)
-{
+if (config.hooks.stats.tracer.enabled) {
   require('look').start(config.hooks.stats.tracer.port, config.hooks.stats.tracer.host);
 }
+//
 //  hook and sink
 var statHook = axon.socket('emitter');
 var statSink = axon.socket('push');
+//  establish hook and sink
 statSink.connect(config.hooks.stats.sink.port);
 statHook.connect(config.hooks.stats.port);
+//  log event
 logger.log('stats sink connected to port: ' + config.hooks.stats.sink.port);
 logger.log('stats subscriber connected to port: ' + config.hooks.stats.port);
-//  private functions
-//  main proccessing function
+//
+//  main proccessing function(wrapped by rate limiting from underscore)
 
 
 function process(value) {
+  //  inc twitter counter
   twitCount++;
+  //  if the tweet is has a lat long pos
   if (value.geo) {
+    //  inc twit with lat long pos counter
     twitCountWithGeo++;
+    //  if the tweet has geocoding that we can use
     if (value.place) {
+      //  if country name is listed for counting twits by country
       if (value.place.country) {
         //get country to increase
         var currentCountry = _.find(countryCount, function(country) {
@@ -42,25 +51,32 @@ function process(value) {
             return country;
           }
         });
+        //  if we havent seen a current country create entity
         if (!currentCountry) {
           countryCount.push({
             count: 1,
             name: value.place.country
           });
         } else {
+          //  if we have record of country inc counter
           currentCountry.count = currentCountry.count + 1;
+          //  merge into parent object
           countryCount = _.union(currentCountry, countryCount);
         }
       }
     }
   }
+  //  sort the object by number of tweets
   countryCount = _.sortBy(countryCount, function(obj) {
     return obj.count;
   });
-  var completionTime = new Date();
+  //  record operation complete
+  var completionTime = microtime.now();
   var calcTime = (completionTime - startTime);
+  //  time result calculations
   totalTime = totalTime + calcTime;
   avgTime = totalTime / twitCount;
+  //  constuct and serialize a return result
   statSink.send(JSON.stringify({
     action: "stat",
     result: {
@@ -79,52 +95,22 @@ function process(value) {
     }
   }));
 }
-//  extend underscore to provide non-async rate limiting
-_.rateLimit = function(func, rate, async) {
-  var queue = [];
-  var timeOutRef = false;
-  var currentlyEmptyingQueue = false;
-
-  var emptyQueue = function() {
-      if (queue.length) {
-        currentlyEmptyingQueue = true;
-        _.delay(function() {
-          if (async) {
-            _.defer(function() {
-              queue.shift().call();
-            });
-          } else {
-            queue.shift().call();
-          }
-          emptyQueue();
-        }, rate);
-      } else {
-        currentlyEmptyingQueue = false;
-      }
-    };
-
-  return function() {
-    var args = _.map(arguments, function(e) {
-      return e;
-    }); // get arguments into an array
-    queue.push(_.bind.apply(this, [func, this].concat(args))); // call apply so that we can pass in arguments as parameters as opposed to an array
-    if (!currentlyEmptyingQueue) {
-      emptyQueue();
-    }
-  };
-};
-
+//
 //  main logic
 //  create throttled version of proccess
-var proc = _.rateLimit(process, config.hooks.stats.rateLimit, false);
+var proc = _.throttle(process, config.hooks.stats.rateLimit);
+//  on call from server enque
 statHook.on('calc', function(value) {
+  //  if debug log event
   if (config.hooks.stats.debug) {
     logger.log('subscriber receiving: ' + inspect(value));
   }
   //  mark time
-  startTime = new Date();
+  startTime = microtime.now();
+  // execute throttled proccessing
   proc(value);
 });
+//
 //  interval for reporting stats
 setInterval(function() {
   logger.log('\ntotal processed: ' + twitCount);
