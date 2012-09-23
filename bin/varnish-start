@@ -1,0 +1,1 @@
+varnishd -a *:80 -f /etc/varnish/globaltwit.vcl -s malloc,1
