@@ -11,7 +11,7 @@
 		},
 		"tracer": {
 				"port": 7000,
-				"enabled": true,
+				"enabled": false,
 				"host":"0.0.0.0"
 			}
 	},
@@ -25,7 +25,7 @@
 			},
 			"tracer": {
 				"port": 7700,
-				"enabled": true,
+				"enabled": false,
 				"host":"0.0.0.0"
 			}
 		},
@@ -34,7 +34,7 @@
 			"port": 8011,
 			"tracer": {
 				"port": 7701,
-				"enabled": true,
+				"enabled": false,
 				"host":"0.0.0.0"
 			}
 		},
@@ -45,7 +45,7 @@
 			},
 			"tracer": {
 				"port": 7702,
-				"enabled": true,
+				"enabled": false,
 				"host":"0.0.0.0"
 			}
 		}

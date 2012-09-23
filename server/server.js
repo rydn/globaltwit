@@ -99,7 +99,7 @@ logger.log('stats sink bound to port: ' + config.hooks.stats.sink.port);
 logger.log('db hook bound to port: ' + config.hooks.db.port);
 logger.log('stats hook bound to port: ' + config.hooks.stats.port);
 //  rate limited lat long emitter wrapper
-var emitLatLngLim = _.rateLimit(emitLatLng, config.server.latlngLimit, false);
+var emitLatLngLim = _.debounce(emitLatLng, config.server.latlngLimit);
 //  configure web sockets
 //  socket events
 io.sockets.on('connection', function(socket) {

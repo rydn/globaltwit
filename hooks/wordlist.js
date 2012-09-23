@@ -9,7 +9,7 @@ var logger = new caterpillar.Logger();
 //  tracer
 if(config.hooks.wordlist.tracer.enabled)
 {
-  require('look').start(config.hooks.wordlist.tracer.port, '127.0.0.1');
+  require('look').start(config.hooks.wordlist.tracer.port, config.hooks.wordlist.tracer.host);
 }
 //main lib
 libWl = require('../lib/createGlossary.js')({
@@ -65,6 +65,16 @@ function _getGlossary() {
 					}
 				}
 			}
+			//	intersect only words that are unique
+			returnObj.results.keywords = _.union(returnObj.results.keywords);
+			//	clean word list
+			var cleanResult = [];
+			_.each(returnObj.results.keywords, function(word){
+				if(word.length >= 4){
+					cleanResult.push(word);
+				}
+			});
+			returnObj.results.keywords = _.unique(_.flatten(cleanResult));
 			//	save to db
 			keywords.insert({results:returnObj.results.keywords});
 			var endTime = new Date();
@@ -81,13 +91,13 @@ function _getGlossary() {
 }
 
 function getTwitsFrmDb(cb) {
-	twits.find().skip(itemsProccessed).limit(1000).toArray(function(err, twitsArr) {
+	twits.find().skip(itemsProccessed).limit(10000).toArray(function(err, twitsArr) {
 		if ((err) || (!twitsArr)) cb(err, null);
 		else cb(null, twitsArr);
 	});
 }
 //	rate limited main task
-var getGlossary = _.throttle(_getGlossary, 100);
+var getGlossary = _.throttle(_getGlossary, 8000);
 //	socket bindings
 wlHook.on('getGlossary', function(wlReq) {
 	getGlossary();
@@ -95,7 +105,6 @@ wlHook.on('getGlossary', function(wlReq) {
 
 //  interval for reporting stats
 setInterval(function() {
-
 	twits.count(function(err, totalInDb) {
 		logger.log('\ntotal tweets in database: ' + totalInDb);
 		logger.log('total processed: ' + itemsProccessed);
