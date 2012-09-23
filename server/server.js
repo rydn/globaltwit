@@ -20,7 +20,7 @@ var logger = new caterpillar.Logger();
 //  tracer
 if(config.hooks.stats.tracer.enabled)
 {
-  require('look').start(config.server.tracer.port, '127.0.0.1');
+  require('look').start(config.server.tracer.port, config.server.tracer.host);
 }
 //  extend underscore to provide non-async rate limiting
 _.rateLimit = function(func, rate, async) {

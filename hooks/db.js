@@ -13,7 +13,7 @@ var server = new Mongolian();
 //	tracer
 if(config.hooks.db.tracer.enabled)
 {
-	require('look').start(config.hooks.db.tracer.port, '127.0.0.1');
+	require('look').start(config.hooks.db.tracer.port, config.hooks.db.tracer.host);
 }
 var db = server.db("globalTwit"),
 twits = db.collection("twits");

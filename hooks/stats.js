@@ -17,7 +17,7 @@ var logger = new caterpillar.Logger();
 //  tracer
 if(config.hooks.stats.tracer.enabled)
 {
-  require('look').start(config.hooks.stats.tracer.port, '127.0.0.1');
+  require('look').start(config.hooks.stats.tracer.port, config.hooks.stats.tracer.host);
 }
 //  hook and sink
 var statHook = axon.socket('emitter');
