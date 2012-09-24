@@ -33,7 +33,6 @@ logger.log('stats subscriber connected to port: ' + config.hooks.stats.port);
 //
 //  main proccessing function(wrapped by rate limiting from underscore)
 
-
 function process(value) {
   //  inc twitter counter
   twitCount++;
