@@ -1,0 +1,31 @@
+ html {
+        height: 100%;
+      }
+      body {
+        overflow: hidden;
+        margin: 0;
+        height: 100%;
+        background: #000000 url(loading.gif) center center no-repeat;
+        color: #ffffff;
+        font-size: 13px;
+        font-family: sans-serif;
+        line-height: 20px;
+      }
+      .stats{
+         padding: 10px 5px 0;
+        position: absolute;
+        top: 1%;
+        left:0;
+        margin:0 auto;
+        width: 500px;
+      }
+      .stat{
+        font-weight: bold;
+      }
+      .countryList{
+        position: absolute;
+        left: 0;
+        margin: 0;
+        width: 500px;
+        list-style: none;
+      }
