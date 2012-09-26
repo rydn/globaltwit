@@ -21,10 +21,12 @@ if (config.hooks.stats.tracer.enabled) {
   require('look').start(config.hooks.stats.tracer.port, config.hooks.stats.tracer.host);
 }
 //
-//  hook and sink
+//  hooks and sink
+//    stat hook
 var statHook = axon.socket('emitter');
+//    stat sink
 var statSink = axon.socket('push');
-//  establish hook and sink
+//  establish hooks and sink
 statSink.connect(config.hooks.stats.sink.port);
 statHook.connect(config.hooks.stats.port);
 //  log event
@@ -76,7 +78,7 @@ function process(value) {
   totalTime = totalTime + calcTime;
   avgTime = totalTime / twitCount;
   //  constuct and serialize a return result
-  statSink.send(JSON.stringify({
+  var statResult = {
     action: "stat",
     result: {
       count: twitCount,
@@ -90,9 +92,12 @@ function process(value) {
           avg: avgTime
         }
       },
-      countryCount: countryCount
+      countryCount: countryCount,
+      timestamp: microtime.now()
     }
-  }));
+  };
+  //  return result
+  statSink.send(JSON.stringify(statResult));
 }
 //
 //  main logic

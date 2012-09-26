@@ -112,7 +112,7 @@ io.sockets.on('connection', function(socket) {
         lat: value.geo.coordinates[0],
         lng: value.geo.coordinates[1],
         size: Math.random() * 150 + 50,
-        rate: Math.round(totTwit / calcTime),
+        rate: Math.round((totTwit / calcTime)*60),
         calcTime: calcTime,
         count: totTwit
       });
@@ -126,10 +126,14 @@ io.sockets.on('connection', function(socket) {
     //  switch on action find socket emit name space
     switch (sinkResult.action) {
     case 'stat':
+      //  save to db
+      dbHook.emit('statResult', sinkResult.result);
       //  stats result
       emitClient(socket, 'stats', sinkResult.result);
       break;
     case 'wl':
+      //  save to db
+      dbHook.emit('wlResult', sinkResult.result);
       //  word list result
       emitClient(socket, 'wordlist', sinkResult);
       break;
@@ -148,7 +152,7 @@ io.sockets.on('connection', function(socket) {
 //  rate controller for client events
 var cEmitter = _.throttle(function(socket, action, data) {
   socket.volatile.emit(action, data);
-}, 250);
+}, 500);
 //  interface for client side throttle
 
 function emitClient(socket, action, data) {
