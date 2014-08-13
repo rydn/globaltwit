@@ -1,0 +1,16 @@
+---
+name: globaltwit
+description: ''
+keywords: ''
+type: NodeJS
+documentation: ''
+images:
+- name: mongo_latest
+  source: mongo:latest
+  type: Default
+- name: redis
+  source: redis:latest
+  type: Default
+- name: redis_1
+  source: redis:latest
+  type: Default
